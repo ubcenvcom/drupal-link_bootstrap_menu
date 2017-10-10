@@ -25,7 +25,7 @@ function link_bootstrap_menu_theme() {
 
 function link_bootstrap_menu_field_formatter_prepare_view($entity_type, $entities, $field, $instances, $langcode, &$items, $displays) {
 if ($field['type']=='entityreference')
-  entityreference_field_formatter_prepare_view($entity_type, $entities, $field, $instances, $langcode, $items, $display);
+  entityreference_field_formatter_prepare_view($entity_type, $entities, $field, $instances, $langcode, $items, $displays);
 }
 
 /**
