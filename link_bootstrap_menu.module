@@ -1,0 +1,92 @@
+<?php
+
+/**
+ * Implements hook_field_formatter_info().
+ */
+function link_bootstrap_menu_field_formatter_info() {
+  return array(
+    'link_bootstrap_menu' => array(
+      'label' => t('Bootstrap drop-down'),
+      'field types' => array('link_field','entityreference','taxonomy_term_reference'),
+      'settings' => array(
+        'link' => TRUE,
+      ),
+    ),
+  );
+}
+
+function link_bootstrap_menu_theme() {
+  return array(
+    'link_formatter_link_bootstrap_menu' => array(
+      'variables' => array('element' => NULL, 'field' => NULL),
+    ),
+  );
+}
+
+function link_bootstrap_menu_field_formatter_prepare_view($entity_type, $entities, $field, $instances, $langcode, &$items, $displays) {
+if ($field['type']=='entityreference')
+  entityreference_field_formatter_prepare_view($entity_type, $entities, $field, $instances, $langcode, $items, $display);
+}
+
+/**
+ * Implements hook_field_formatter_view().
+ */
+function link_bootstrap_menu_field_formatter_view($entity_type, $entity, $field, $instance, $langcode, $items, $display) {
+  $elements = array();
+  $i = array();
+
+  switch ($field['type']) {
+    case 'entityreference':
+    $target_type = $field['settings']['target_type'];
+    foreach ($items as $item) {
+        $label = entity_label($target_type, $item['entity']);
+        $uri = entity_uri($target_type, $item['entity']);
+        $i[]['data']=l($label, $uri['path'], $uri['options']);
+    }
+
+    break;
+    case 'link_field':
+    foreach ($items as $delta => $item) {
+      $i[]['data']=theme('link_formatter_link_default', array('element'=>$item));
+    }
+    break;    
+  }
+
+  $label=$instance['label'];
+
+  $r=array();
+  $r[]=array(
+   '#prefix' => '<div class="dropdown"><button class="btn btn-default dropdown-toggle" type="button" data-toggle="dropdown"><span class="dropdown-btn-label">'.$label.' </span><span class="caret"></span></button>',
+   '#suffix' => '</div>',
+   '#theme' => 'item_list',
+   '#items' => $i,
+   '#attributes' => array('class' => 'dropdown-menu'),
+  );
+
+  return $r;
+}
+
+/**
+ * Formats a link.
+ */
+function theme_link_formatter_link_bootstrap_menu($vars) {
+  $link_options = $vars['element'];
+  unset($link_options['title']);
+  unset($link_options['url']);
+
+  if (isset($link_options['attributes']['class'])) {
+    $link_options['attributes']['class'] = array($link_options['attributes']['class']);
+  }
+  // Display a normal link if both title and URL are available.
+  if (!empty($vars['element']['title']) && !empty($vars['element']['url'])) {
+    return l($vars['element']['title'], $vars['element']['url'], $link_options);
+  }
+  // If only a title, display the title.
+  elseif (!empty($vars['element']['title'])) {
+    return $link_options['html'] ? $vars['element']['title'] : check_plain($vars['element']['title']);
+  }
+  elseif (!empty($vars['element']['url'])) {
+    return l($vars['element']['title'], $vars['element']['url'], $link_options);
+  }
+}
+

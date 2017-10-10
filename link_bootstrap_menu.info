@@ -1,0 +1,5 @@
+name = Link Field Bootstrap drop-down formatter
+description = Provides a field formatter to output link fields as bootstrap drop-down menu.
+core = 7.x
+dependencies[] = link entityreference
+
