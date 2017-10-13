@@ -100,8 +100,6 @@ function link_bootstrap_menu_field_formatter_view($entity_type, $entity, $field,
     break;    
   }
 
-  dpm($settings);
-
   $label=$instance['label'];
 
   $btn=empty($settings['button_css']) ? 'btn-default' : check_plain($settings['button_css']);
