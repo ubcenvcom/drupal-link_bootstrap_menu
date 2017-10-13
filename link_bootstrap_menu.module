@@ -7,9 +7,11 @@ function link_bootstrap_menu_field_formatter_info() {
   return array(
     'link_bootstrap_menu' => array(
       'label' => t('Bootstrap drop-down'),
-      'field types' => array('link_field','entityreference','taxonomy_term_reference'),
+      'field types' => array('link_field','entityreference'), // XXX Add 'taxonomy_term_reference' support
       'settings' => array(
-        'link' => TRUE,
+	'label' => TRUE,
+	'icon_css' => 'caret',
+	'button_css' => 'btn-default'
       ),
     ),
   );
@@ -23,6 +25,50 @@ function link_bootstrap_menu_theme() {
   );
 }
 
+function link_bootstrap_menu_field_formatter_settings_form($field, $instance, $view_mode, $form, &$form_state) {
+  $display = $instance['display'][$view_mode];
+  $settings = $display['settings'];
+
+//if ($display['type'] == '') {
+    $element['label'] = array(
+      '#title' => t('Display label in button'),
+      '#type' => 'checkbox',
+      '#default_value' => $settings['label'],
+      '#description' => t('Hide or display label in button')
+    );
+    $element['button_css'] = array(
+      '#type' => 'textfield',
+      '#title' => t('Button CSS'),
+      '#default_value' => $settings['button_css'],
+      '#description' => t('The bootstrap CSS button btn-* value or custom')
+    );
+    $element['icon_css'] = array(
+      '#type' => 'textfield',
+      '#title' => t('Icon CSS'),
+      '#default_value' => $settings['icon_css'],
+      '#description' => t('Button icon CSS, bootstrap default is "caret"')
+    );
+//  }
+return $element;
+}
+
+function link_bootstrap_menu_field_settings_form_validate($element, &$form_state, $complete_form) {
+/* Nothing for now */
+}
+
+function link_bootstrap_menu_field_formatter_settings_summary($field, $instance, $view_mode) {
+  $display = $instance['display'][$view_mode];
+  $settings = $display['settings'];
+
+  $summary = array();
+
+  $summary[] = $settings['label'] ? t('Use label') : t('No label');
+  $summary[] = 'Button CSS: '.check_plain($settings['button_css']);
+  $summary[] = 'Icon CSS: '.check_plain($settings['icon_css']);
+
+  return implode('<br />', $summary);
+}
+
 function link_bootstrap_menu_field_formatter_prepare_view($entity_type, $entities, $field, $instances, $langcode, &$items, $displays) {
 if ($field['type']=='entityreference')
   entityreference_field_formatter_prepare_view($entity_type, $entities, $field, $instances, $langcode, $items, $displays);
@@ -34,6 +80,8 @@ if ($field['type']=='entityreference')
 function link_bootstrap_menu_field_formatter_view($entity_type, $entity, $field, $instance, $langcode, $items, $display) {
   $elements = array();
   $i = array();
+
+  $settings = $display['settings'];
 
   switch ($field['type']) {
     case 'entityreference':
@@ -52,11 +100,26 @@ function link_bootstrap_menu_field_formatter_view($entity_type, $entity, $field,
     break;    
   }
 
+  dpm($settings);
+
   $label=$instance['label'];
+
+  $btn=empty($settings['button_css']) ? 'btn-default' : check_plain($settings['button_css']);
+  $icon=empty($settings['icon_css']) ? false : check_plain($settings['icon_css']);
+
+  $prefix='<div class="dropdown"><button class="btn '.$btn.' dropdown-toggle" type="button" data-toggle="dropdown">';
+  
+  if (!empty($label) && $settings['label']!=false)
+    $prefix.='<span class="dropdown-btn-label">'.$label.' </span>';
+  
+  if ($icon!==false)
+    $prefix.='<span class="'.$icon.'"></span>';
+
+  $prefix.='</button>';
 
   $r=array();
   $r[]=array(
-   '#prefix' => '<div class="dropdown"><button class="btn btn-default dropdown-toggle" type="button" data-toggle="dropdown"><span class="dropdown-btn-label">'.$label.' </span><span class="caret"></span></button>',
+   '#prefix' => $prefix,
    '#suffix' => '</div>',
    '#theme' => 'item_list',
    '#items' => $i,
