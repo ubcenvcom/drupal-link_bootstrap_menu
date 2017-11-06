@@ -7,7 +7,7 @@ function link_bootstrap_menu_field_formatter_info() {
   return array(
     'link_bootstrap_menu' => array(
       'label' => t('Bootstrap drop-down'),
-      'field types' => array('link_field','entityreference'), // XXX Add 'taxonomy_term_reference' support
+      'field types' => array('link_field','entityreference','taxonomy_term_reference'),
       'settings' => array(
 	'label' => TRUE,
 	'icon_css' => 'caret',
@@ -70,8 +70,27 @@ function link_bootstrap_menu_field_formatter_settings_summary($field, $instance,
 }
 
 function link_bootstrap_menu_field_formatter_prepare_view($entity_type, $entities, $field, $instances, $langcode, &$items, $displays) {
-if ($field['type']=='entityreference')
-  entityreference_field_formatter_prepare_view($entity_type, $entities, $field, $instances, $langcode, $items, $displays);
+switch ($field['type']) {
+  case 'entityreference':
+    entityreference_field_formatter_prepare_view($entity_type, $entities, $field, $instances, $langcode, $items, $displays);
+  break;
+  case 'taxonomy_term_reference':
+    $tids=array();
+    foreach ($entities as $id => $entity) {
+      foreach ($items[$id] as $delta => $item) {
+      if ($item['tid'] == 'autocreate')
+        continue;
+      $tids[$item['tid']] = $item['tid'];      
+     }
+    }
+    $terms=taxonomy_term_load_multiple($tids);
+    foreach ($entities as $id => $entity) {
+      foreach ($items[$id] as $delta => $item) {
+        $items[$id][$delta]['entity']=$terms[$item['tid']];
+      }
+    }
+  break;
+}
 }
 
 /**
@@ -84,6 +103,15 @@ function link_bootstrap_menu_field_formatter_view($entity_type, $entity, $field,
   $settings = $display['settings'];
 
   switch ($field['type']) {
+    case 'taxonomy_term_reference':
+    foreach ($items as $delta => $item) {
+      if (empty($item['entity']))
+        continue;
+      $label = entity_label('taxonomy_term', $item['entity']);
+      $uri=entity_uri('taxonomy_term', $item['entity']);
+      $i[]['data']=l($label, $uri['path'], $uri['options']);
+    }
+    break;
     case 'entityreference':
     $target_type = $field['settings']['target_type'];
     foreach ($items as $item) {
