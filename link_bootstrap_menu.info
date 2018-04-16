@@ -1,6 +1,10 @@
-name = Link Field Bootstrap drop-down formatter
-description = Provides a field formatter to output link fields as bootstrap drop-down menu.
+name = Field Bootstrap formatter
+description = Provides a field formatter to output various fields as bootstrap componets (drop-down, accordion, etc).
 core = 7.x
+
+dependencies[] = field
+dependencies[] = file
 dependencies[] = link
 dependencies[] = entityreference
+dependencies[] = token
 

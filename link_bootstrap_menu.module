@@ -6,12 +6,38 @@
 function link_bootstrap_menu_field_formatter_info() {
   return array(
     'link_bootstrap_menu' => array(
-      'label' => t('Bootstrap drop-down'),
-      'field types' => array('link_field','entityreference','taxonomy_term_reference'),
+      'label' => t('Bootstrap component'),
+      'field types' => array('link_field','entityreference','taxonomy_term_reference','file','text','text_long','text_with_summary'),
       'settings' => array(
 	'label' => TRUE,
+	'component' => 'dropdown',
 	'icon_css' => 'caret',
 	'button_css' => 'btn-default'
+      ),
+    ),
+    'link_bootstrap_accordion' => array(
+      'label' => t('Bootstrap accordion'),
+      'field types' => array('entityreference','taxonomy_term_reference','file','text_long','text_with_summary','field_collection'),
+      'settings' => array(
+	'parent_id' => 'bs-accordion-0',
+      ),
+    ),
+    'link_bootstrap_accordion_label' => array(
+      'label' => t('Bootstrap accordion header'),
+      'field types' => array('text','text_long','text_with_summary'),
+      'settings' => array(
+	'collapsed' => TRUE,
+	'parent_id' => 'bs-accordion-0',
+	'icon_css' => 'caret',
+	'extra_css' => '',
+      ),
+    ),
+    'link_bootstrap_accordion_item' => array(
+      'label' => t('Bootstrap accordion item'),
+      'field types' => array('text','text_long','text_with_summary','file','entityreference'),
+      'settings' => array(
+	'parent_id' => 'bs-accordion-0',
+	'extra_css' => '',
       ),
     ),
   );
@@ -28,13 +54,28 @@ function link_bootstrap_menu_theme() {
 function link_bootstrap_menu_field_formatter_settings_form($field, $instance, $view_mode, $form, &$form_state) {
   $display = $instance['display'][$view_mode];
   $settings = $display['settings'];
+  $element=array();
 
-//if ($display['type'] == '') {
+  switch ($display['type']) {
+    case 'link_bootstrap_menu':
+    $element['component'] = array(
+      '#title' => t('Component'),
+      '#type' => 'select',
+      '#options' => array('dropdown'=>'Drop down', 'listgroup'=>'List group'),
+      '#default_value' => 'dropdown',
+      '#description' => t('Bootstrap component used for rendering')
+    );
     $element['label'] = array(
-      '#title' => t('Display label in button'),
+      '#title' => t('Use field label'),
       '#type' => 'checkbox',
       '#default_value' => $settings['label'],
-      '#description' => t('Hide or display label in button')
+      '#description' => t('Use field label for component label')
+    );
+    $element['clabel'] = array(
+      '#title' => t('Custom label'),
+      '#type' => 'textfield',
+      '#default_value' => $settings['clabel'],
+      '#description' => t('Custom label, supports tokens. Used if not empty.')
     );
     $element['button_css'] = array(
       '#type' => 'textfield',
@@ -48,7 +89,38 @@ function link_bootstrap_menu_field_formatter_settings_form($field, $instance, $v
       '#default_value' => $settings['icon_css'],
       '#description' => t('Button icon CSS, bootstrap default is "caret"')
     );
-//  }
+    break;
+    case 'link_bootstrap_accordion_label':
+    $element['label'] = array(
+      '#title' => t('Default to collapsed'),
+      '#type' => 'checkbox',
+      '#default_value' => $settings['collapsed'],
+      '#description' => t('Collapsed')
+    );
+    $element['icon_css'] = array(
+      '#type' => 'textfield',
+      '#title' => t('Icon CSS'),
+      '#default_value' => $settings['icon_css'],
+      '#description' => t('Label prefix icon CSS, bootstrap default is "caret"')
+    );
+    // Fall-trough
+    case 'link_bootstrap_accordion_item':
+    case 'link_bootstrap_accordion':
+     $element['parent_id'] = array(
+      '#type' => 'textfield',
+      '#title' => t('ID'),
+      '#default_value' => $settings['parent_id'],
+      '#description' => t('The ID of the accordion')
+     );
+    $element['extra_css'] = array(
+      '#type' => 'textfield',
+      '#title' => t('Extra CSS'),
+      '#default_value' => $settings['extra_css'],
+      '#description' => t('Extra CSS for component')
+    );
+    break;
+  }
+
 return $element;
 }
 
@@ -62,9 +134,16 @@ function link_bootstrap_menu_field_formatter_settings_summary($field, $instance,
 
   $summary = array();
 
-  $summary[] = $settings['label'] ? t('Use label') : t('No label');
-  $summary[] = 'Button CSS: '.check_plain($settings['button_css']);
-  $summary[] = 'Icon CSS: '.check_plain($settings['icon_css']);
+  switch ($display['type']) {
+  case 'link_bootstrap_menu':
+   $summary[] = $view_mode;
+   $summary[] = $settings['component'];
+   $summary[] = $settings['label'] ? t('Use field label') : t('No label');
+   $summary[] = empty($settings['clabel']) ? '' : t('Custom label');
+   $summary[] = 'Button CSS: '.check_plain($settings['button_css']);
+   $summary[] = 'Icon CSS: '.check_plain($settings['icon_css']);
+  break;
+  }
 
   return implode('<br />', $summary);
 }
@@ -90,17 +169,21 @@ switch ($field['type']) {
       }
     }
   break;
+  case 'file':
+   //dpr($items);
+  break;
+  case 'field_collection':
+  break;
+  default:
+  break;
 }
 }
 
-/**
- * Implements hook_field_formatter_view().
- */
-function link_bootstrap_menu_field_formatter_view($entity_type, $entity, $field, $instance, $langcode, $items, $display) {
+function link_bootstrap_menu_menu_view($entity_type, $entity, $field, $instance, $langcode, $items, $display) {
   $elements = array();
   $i = array();
-
   $settings = $display['settings'];
+  $label=false;
 
   switch ($field['type']) {
     case 'taxonomy_term_reference':
@@ -118,21 +201,274 @@ function link_bootstrap_menu_field_formatter_view($entity_type, $entity, $field,
         $label = entity_label($target_type, $item['entity']);
         $uri = entity_uri($target_type, $item['entity']);
         $i[]['data']=l($label, $uri['path'], $uri['options']);
+      // theme_entityreference_label()
     }
-
     break;
     case 'link_field':
     foreach ($items as $delta => $item) {
       $i[]['data']=theme('link_formatter_link_default', array('element'=>$item));
     }
-    break;    
+    break;
+    case 'text_with_summary':
+      $label=strip_tags($items[0]['summary']);
+    case 'text_long':
+    case 'text':
+      foreach ($items as $delta => $item)
+        $i[]['data']=_text_sanitize($instance, $langcode, $item, 'value');
+    break;
+    case 'file':
+	foreach ($items as $delta => $item) {
+         $i[]['data'] = array(
+           '#theme' => 'file_link',
+           '#file' => (object) $item,
+         );
+      }
+    break;
+    default:
+      $i[]['data']='';
+    break;
   }
 
-  $label=$instance['label'];
+  // Field type didn't set label, in that case use default
+  if (empty($label))
+    $label=$instance['label'];
+
+  switch ($settings['component']) {
+   case 'dropdown':
+    return link_bootstrap_menu_format_dropdown_menu($settings, $i);
+   break;
+   case 'accordion':
+    return link_bootstrap_menu_format_accordion($settings, $i);
+   break;
+   case 'listgroup':
+    return link_bootstrap_menu_format_listgroup($settings, $i);
+   break;
+  }
+
+  return array();
+}
+
+function link_bootstrap_menu_accordion_view($entity_type, $entity, $field, $instance, $langcode, $items, $display) {
+  $settings = $display['settings'];
+  $i=array();
+  switch ($field['type']) {
+    case 'field_collection':
+	$pid=$settings['parent_id'];
+        foreach ($items as $delta => $item) {
+		if (!is_array($item))
+			continue;
+		$id=$item['value'];
+	        if ($field_collection = field_collection_field_get_entity($item)) {
+			$e=$field_collection->view('full');
+			$i[$delta]['data']=$e;
+		}
+	}
+	$r=array();
+	$r[]=array(
+		'#theme' => 'container',
+		'#attributes' => array('class'=>'panel-group field-collection-accordion','id'=>$pid),
+		'#children' => drupal_render_children($i),
+	);
+
+	return $r;
+
+        //return link_bootstrap_menu_format_accordion($display['settings'], $i);
+    break;
+    case 'file':
+	foreach ($items as $delta => $item) {
+         $i[] = array(
+           '#theme' => 'file_link',
+           '#file' => (object) $item,
+         );
+        }
+
+//	return $i;
+
+	$i=array();
+      foreach ($items as $delta => $item)
+        $i[]['data']=_text_sanitize($instance, $langcode, $item, 'value');
+
+
+	  $r=array();
+	  $r[]=array(
+	   '#theme' => 'container',
+	   '#attributes' => array('class'=>check_plain($settings['extra_css']),'id'=>check_plain($settings['parent_id'])),
+	   '#children' => theme('item_list', $i)
+	  );
+
+	return $r;
+    break;
+    default:
+    // dvm($field);
+    break;
+  }
+  return array();
+}
+
+/**
+ * Implements hook_field_formatter_view().
+ */
+function link_bootstrap_menu_field_formatter_view($entity_type, $entity, $field, $instance, $langcode, $items, $display) {
+  $settings = $display['settings'];
+
+  switch ($display['type']) {
+   case 'link_bootstrap_accordion':
+    return link_bootstrap_menu_accordion_view($entity_type, $entity, $field, $instance, $langcode, $items, $display);
+   break;
+   case 'link_bootstrap_menu':
+    return link_bootstrap_menu_menu_view($entity_type, $entity, $field, $instance, $langcode, $items, $display);
+   break;
+   case 'link_bootstrap_accordion_label':
+        $title=array();
+	$pid=$settings['parent_id'];
+	$iid=$pid.'-item';
+	$iid='bs-accordion-item-'.$entity->item_id;
+        foreach ($items as $delta => $item) {
+          $title[]=strip_tags($item['value']); // _text_sanitize($instance, $langcode, $item, 'value');
+	}
+        $t=trim(implode($title));
+
+	if (!empty($settings['icon_css'])) {
+	  $icon='<span class="'.check_plain($settings['icon_css']).'"></span>';
+        } else $icon='';
+
+        $r=array();
+	$c='bs-accordion-link collapsed '.check_plain($settings['extra_css']);
+        $r[]=array(
+          '#type' => 'html_tag',
+          '#tag' => 'div',
+          '#value' => $icon.l($t, '', array('external' => TRUE, 'attributes'=>array('class'=>$c, 'data-toggle'=>"collapse", 'data-parent'=>"#$pid"), 'fragment'=>$iid)),
+        );
+	//dvm($r);
+	return array($r);
+   break;
+   case 'link_bootstrap_accordion_item':
+     return link_bootstrap_menu_accordion_item($entity_type, $entity, $field, $instance, $langcode, $items, $display);
+   break;
+  }
+
+  return array();
+}
+
+function link_bootstrap_menu_format_files_list(array $items) {
+ foreach ($items as $file) {
+   $i[]['data']=theme('file_link', array('file'=>(object)$file));
+ }
+ $fl=array();
+ $fl[]=array(
+  '#theme' => 'item_list',
+  '#attributes' => array('class'=>'lbsm-file-list'),
+  '#type' => 'ul',
+  '#items' => $i
+ );
+ return $fl;
+}
+
+function link_bootstrap_menu_accordion_item($entity_type, $entity, $field, $instance, $langcode, $items, $display) {
+  $r=array();
+  $settings = $display['settings'];
+  $i=array();
+  $iid='bs-accordion-item-'.$entity->item_id;
+  switch ($field['type']) {
+    case 'file':
+      $f=link_bootstrap_menu_format_files_list($items);
+      $r[]=array(
+        '#theme' => 'container',
+        '#attributes' => array('class'=>'collapse','id'=>$iid),
+        '#children' => drupal_render_children($f),
+      );
+    break;
+    case 'text_with_summary':
+    case 'text_long':
+    case 'text':
+      foreach ($items as $delta => $item)
+        $i[]['data']=_text_sanitize($instance, $langcode, $item, 'value');
+      $r[]=array(
+        '#theme' => 'container',
+        '#attributes' => array('class'=>'','id'=>$settings['parent_id']),
+        '#children' => drupal_render_children($i),
+      );
+    break;
+  }
+
+  return $r;
+}
+/*
+
+<div id="facc">
+
+<div><a class="collapsed" role="button" data-toggle="collapse" data-parent="#facc" href="#file002" aria-expanded="false">Finland</a></div>
+<div id="file002" class="collapse">
+ ...<div>Blahh blahh</div>...
+</div>
+
+</div>
+
+*/
+
+function link_bootstrap_menu_format_accordion(array $settings, array $items) {
+
+  $pid=drupal_html_id('bs-accordion-'.rand());
+
+  $i=array();
+  foreach ($items as $delta => $item) {
+   $iid=drupal_html_id('bs-accordion-item-'.$delta);
+   $title='This is some title';
+   $i=array(
+        'one'=>array(
+          '#type' => 'html_tag',
+          '#tag' => 'div',
+          '#value' => l($title, '', array('external' => TRUE, 'attributes'=>array('class'=>'bs-accordion-link', 'data-toggle'=>"collapse", 'data-parent'=>"#$pid"), 'fragment'=>$iid)),
+        ),
+        'two'=>array(
+          '#type' => 'html_tag',
+          '#tag' => 'div',
+          '#attributes' => array('class' => 'collapse', 'id'=>"$iid"),
+          '#value' => $item['data'],
+        ),
+    );
+  }
+
+  $r=array();
+  $r[]=array(
+   '#theme' => 'container',
+   '#attributes' => array('class'=>'panel-group','id'=>$pid),
+   '#children' => drupal_render_children($i),
+  );
+
+  return $r;
+
+}
+
+function link_bootstrap_menu_format_listgroup(array $settings, array $items) {
+
+  foreach ($items as &$item) {
+   $item['class']='list-group-item';
+  }
+
+  $label=empty($settings['clabel']) ? false : token_replace($settings['clabel'], array(), array('sanitize' => TRUE));
+
+  if (!empty($label))
+    array_unshift($items, array('data'=>$label,'class'=>'list-group-item active'));
+
+  $r=array();
+  $r[]=array(
+   '#prefix' => '',
+   '#suffix' => '',
+   '#theme' => 'item_list',
+   '#type' => 'div',
+   '#items' => $items,
+   '#attributes' => array('class' => 'list-group'),
+  );
+
+  return $r;
+}
+
+function link_bootstrap_menu_format_dropdown_menu(array $settings, array $items) {
+  $clabel=empty($settings['label']) ? '' : token_replace($settings['label'], array(), array('sanitize' => FALSE));;
 
   $btn=empty($settings['button_css']) ? 'btn-default' : check_plain($settings['button_css']);
   $icon=empty($settings['icon_css']) ? false : check_plain($settings['icon_css']);
-
   $prefix='<div class="dropdown"><button class="btn '.$btn.' dropdown-toggle" type="button" data-toggle="dropdown">';
   
   if (!empty($label) && $settings['label']!=false)
@@ -148,11 +484,11 @@ function link_bootstrap_menu_field_formatter_view($entity_type, $entity, $field,
    '#prefix' => $prefix,
    '#suffix' => '</div>',
    '#theme' => 'item_list',
-   '#items' => $i,
+   '#items' => $items,
    '#attributes' => array('class' => 'dropdown-menu'),
   );
 
-  return $r;
+  return $r; 
 }
 
 /**
