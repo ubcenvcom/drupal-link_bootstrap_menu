@@ -2,6 +2,8 @@ name = Field Bootstrap formatter
 description = Provides a field formatter to output various fields as bootstrap componets (drop-down, accordion, etc).
 core = 7.x
 
+version = "7.x-0.1"
+
 dependencies[] = field
 dependencies[] = file
 dependencies[] = link
