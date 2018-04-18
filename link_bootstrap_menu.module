@@ -170,7 +170,6 @@ switch ($field['type']) {
     }
   break;
   case 'file':
-   //dpr($items);
   break;
   case 'field_collection':
   break;
@@ -253,26 +252,22 @@ function link_bootstrap_menu_accordion_view($entity_type, $entity, $field, $inst
   $i=array();
   switch ($field['type']) {
     case 'field_collection':
-	$pid=$settings['parent_id'];
+	$pid=$settings['parent_id'].'-'.$entity->nid;
         foreach ($items as $delta => $item) {
 		if (!is_array($item))
 			continue;
 		$id=$item['value'];
 	        if ($field_collection = field_collection_field_get_entity($item)) {
-			$e=$field_collection->view('full');
-			$i[$delta]['data']=$e;
+			// XXX: How to remove the wrapper around the entities??? Workaround for now, DS Extras
+			$i[$delta]=$field_collection->view('full');
 		}
 	}
-	$r=array();
-	$r[]=array(
+	$r=array(
 		'#theme' => 'container',
-		'#attributes' => array('class'=>'panel-group field-collection-accordion','id'=>$pid),
+		'#attributes' => array('class'=>'field-collection-accordion','id'=>$pid,'role'=>'tablist'),
 		'#children' => drupal_render_children($i),
 	);
-
-	return $r;
-
-        //return link_bootstrap_menu_format_accordion($display['settings'], $i);
+	return array($r);
     break;
     case 'file':
 	foreach ($items as $delta => $item) {
@@ -287,7 +282,6 @@ function link_bootstrap_menu_accordion_view($entity_type, $entity, $field, $inst
 	$i=array();
       foreach ($items as $delta => $item)
         $i[]['data']=_text_sanitize($instance, $langcode, $item, 'value');
-
 
 	  $r=array();
 	  $r[]=array(
@@ -320,9 +314,11 @@ function link_bootstrap_menu_field_formatter_view($entity_type, $entity, $field,
    break;
    case 'link_bootstrap_accordion_label':
         $title=array();
-	$pid=$settings['parent_id'];
-	$iid=$pid.'-item';
+	$h=$entity->hostEntity();
+
+	$pid=$settings['parent_id'].'-'.$h->nid;
 	$iid='bs-accordion-item-'.$entity->item_id;
+
         foreach ($items as $delta => $item) {
           $title[]=strip_tags($item['value']); // _text_sanitize($instance, $langcode, $item, 'value');
 	}
@@ -334,16 +330,20 @@ function link_bootstrap_menu_field_formatter_view($entity_type, $entity, $field,
 
         $r=array();
 	$c='bs-accordion-link collapsed '.check_plain($settings['extra_css']);
-        $r[]=array(
-          '#type' => 'html_tag',
-          '#tag' => 'div',
-          '#value' => $icon.l($t, '', array('external' => TRUE, 'attributes'=>array('class'=>$c, 'data-toggle'=>"collapse", 'data-parent'=>"#$pid"), 'fragment'=>$iid)),
+        $r=array(
+          '#theme' => 'container',
+          '#children' => $icon.l($t, '', array('external' => TRUE, 'attributes'=>array('class'=>$c, 'data-toggle'=>"collapse", 'data-parent'=>"#$pid"), 'fragment'=>$iid)),
         );
-	//dvm($r);
-	return array($r);
+	return $r;
    break;
    case 'link_bootstrap_accordion_item':
-     return link_bootstrap_menu_accordion_item($entity_type, $entity, $field, $instance, $langcode, $items, $display);
+      $tmp=link_bootstrap_menu_accordion_item($entity_type, $entity, $field, $instance, $langcode, $items, $display);
+      $r=array(
+        '#theme' => 'container',
+        '#attributes' => array('class'=>'panel'),
+        '#children' => drupal_render_children($tmp),
+      );
+      return $r;
    break;
   }
 
@@ -374,7 +374,7 @@ function link_bootstrap_menu_accordion_item($entity_type, $entity, $field, $inst
       $f=link_bootstrap_menu_format_files_list($items);
       $r[]=array(
         '#theme' => 'container',
-        '#attributes' => array('class'=>'collapse','id'=>$iid),
+        '#attributes' => array('class'=>'collapse','id'=>$iid,'role'=>'tabpanel'),
         '#children' => drupal_render_children($f),
       );
     break;
@@ -407,9 +407,7 @@ function link_bootstrap_menu_accordion_item($entity_type, $entity, $field, $inst
 */
 
 function link_bootstrap_menu_format_accordion(array $settings, array $items) {
-
   $pid=drupal_html_id('bs-accordion-'.rand());
-
   $i=array();
   foreach ($items as $delta => $item) {
    $iid=drupal_html_id('bs-accordion-item-'.$delta);
