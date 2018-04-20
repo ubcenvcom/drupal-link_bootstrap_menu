@@ -357,7 +357,7 @@ function link_bootstrap_menu_format_files_list(array $items) {
  $fl=array();
  $fl[]=array(
   '#theme' => 'item_list',
-  '#attributes' => array('class'=>'lbsm-file-list'),
+  '#attributes' => array('class'=>'list-unstyled lbsm-file-list'),
   '#type' => 'ul',
   '#items' => $i
  );
