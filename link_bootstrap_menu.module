@@ -36,7 +36,6 @@ function link_bootstrap_menu_field_formatter_info() {
       'label' => t('Bootstrap accordion item'),
       'field types' => array('text','text_long','text_with_summary','file','entityreference'),
       'settings' => array(
-	'parent_id' => 'bs-accordion-0',
 	'extra_css' => '',
       ),
     ),
@@ -91,7 +90,7 @@ function link_bootstrap_menu_field_formatter_settings_form($field, $instance, $v
     );
     break;
     case 'link_bootstrap_accordion_label':
-    $element['label'] = array(
+    $element['collapsed'] = array(
       '#title' => t('Default to collapsed'),
       '#type' => 'checkbox',
       '#default_value' => $settings['collapsed'],
@@ -103,8 +102,15 @@ function link_bootstrap_menu_field_formatter_settings_form($field, $instance, $v
       '#default_value' => $settings['icon_css'],
       '#description' => t('Label prefix icon CSS, bootstrap default is "caret"')
     );
-    // Fall-trough
+    break;
     case 'link_bootstrap_accordion_item':
+    $element['extra_css'] = array(
+      '#type' => 'textfield',
+      '#title' => t('Extra CSS'),
+      '#default_value' => $settings['extra_css'],
+      '#description' => t('Extra CSS for component')
+    );
+    break;
     case 'link_bootstrap_accordion':
      $element['parent_id'] = array(
       '#type' => 'textfield',
@@ -142,6 +148,18 @@ function link_bootstrap_menu_field_formatter_settings_summary($field, $instance,
    $summary[] = empty($settings['clabel']) ? '' : t('Custom label');
    $summary[] = 'Button CSS: '.check_plain($settings['button_css']);
    $summary[] = 'Icon CSS: '.check_plain($settings['icon_css']);
+  break;
+  case 'link_bootstrap_accordion':
+   $summary[] = $settings['collapsed'] ? t('Collapsed') : t('Open');
+   $summary[] = 'ID: '.check_plain($settings['parent_id']);
+   $summary[] = 'Extra CSS: '.check_plain($settings['extra_css']);
+  break;
+  case 'link_bootstrap_accordion_label':
+   $summary[] = 'Icon CSS: '.check_plain($settings['icon_css']);
+   $summary[] = 'Extra CSS: '.check_plain($settings['extra_css']);
+  break;
+  case 'link_bootstrap_accordion_item':
+   $summary[] = 'Extra CSS: '.check_plain($settings['extra_css']);
   break;
   }
 
