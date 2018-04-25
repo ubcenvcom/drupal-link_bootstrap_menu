@@ -369,6 +369,7 @@ function link_bootstrap_menu_field_formatter_view($entity_type, $entity, $field,
 }
 
 function link_bootstrap_menu_format_files_list(array $items) {
+ $i=array();
  foreach ($items as $file) {
    $i[]['data']=theme('file_link', array('file'=>(object)$file));
  }
